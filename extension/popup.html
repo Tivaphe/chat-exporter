@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { width: 300px; font-family: system-ui, Segoe UI, Roboto, sans-serif; margin: 0; background: #f7f8fc; color: #1a1a2e; }
+    header { background: #4f46e5; color: #fff; padding: 12px 14px; font-weight: 700; font-size: 14px; }
+    .wrap { padding: 14px; }
+    label { font-size: 12.5px; display: block; margin: 10px 0 4px; font-weight: 600; }
+    select, button { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #cfd3e6; font-size: 13px; box-sizing: border-box; }
+    .row { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 12.5px; }
+    .row input { width: auto; }
+    .row label { margin: 0; font-weight: 500; }
+    button.primary { background: #4f46e5; color: #fff; border: none; font-weight: 700; cursor: pointer; margin-top: 6px; padding: 10px; }
+    button.primary:hover { background: #4338ca; }
+    button.ghost { background: #fff; color: #4f46e5; border: 1px solid #c7c9ec; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    #status { font-size: 12px; margin-top: 10px; min-height: 16px; color: #444; }
+    #diag { font-size: 11.5px; margin-top: 8px; background: #fff; border: 1px solid #e3e6ef; border-radius: 8px; padding: 8px; display: none; line-height: 1.5; }
+    #diag b { color: #4f46e5; }
+    .links { margin-top: 10px; font-size: 11px; }
+    .links a { color: #4f46e5; cursor: pointer; text-decoration: underline; }
+    .hint { font-size: 11px; color: #777; margin-top: 8px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <header>📥 Exporter la discussion</header>
+  <div class="wrap">
+    <label for="format">Format</label>
+    <select id="format">
+      <option value="txt">Texte brut (.txt)</option>
+      <option value="md">Markdown (.md)</option>
+      <option value="json">JSON structuré (.json)</option>
+    </select>
+
+    <div class="row">
+      <input type="checkbox" id="autoscroll" checked />
+      <label for="autoscroll">Scroll automatique (charge tous les messages)</label>
+    </div>
+    <div class="row">
+      <input type="checkbox" id="reasoning" />
+      <label for="reasoning">Inclure le raisonnement / appels d'outils</label>
+    </div>
+
+    <button class="primary" id="go">Exporter</button>
+    <button class="ghost" id="diagBtn">🔍 Tester cette page</button>
+
+    <div id="diag"></div>
+    <div id="status"></div>
+
+    <div class="links">
+      <a id="optionsLink">⚙️ Ajouter / configurer un site (sélecteurs)</a>
+    </div>
+    <div class="hint">Astuce : laisse l'onglet visible pendant le défilement. Le fichier se télécharge à la fin.</div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
