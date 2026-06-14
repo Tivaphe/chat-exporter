@@ -94,7 +94,7 @@ de l'extension et ajoute ses sélecteurs CSS. Voir le guide dans
 ## 🔒 Confidentialité
 
 - Tout s'exécute **dans ton navigateur**. Aucune requête réseau, aucun tracking.
-- Le code ne contient **que des sélecteurs techniques**, jamais de contenu de discussion.
+- Le code ne contient **que des sélecteurs techniques**.
 
 ---
 
