@@ -79,6 +79,7 @@
       (el.getAttribute("data-message-author-role") || "") + " " +
       (el.getAttribute("data-testid") || "") + " " +
       (el.getAttribute("data-role") || "") + " " +
+      (el.getAttribute("data-conversation-role") || "") + " " +
       (el.getAttribute("aria-label") || "") + " " +
       (el.className || "")
     ).toLowerCase();
@@ -89,14 +90,19 @@
 
   function generic() {
     const sel =
-      '[data-message-author-role],[data-testid*="message"],[data-role],[class*="message-bubble"],[class*="claude-response"],[class*="claude-message"],[class*="chat-turn"],[class*="conversation-turn"],[class*="-message"],[class*="message-"]';
+      '[data-message-author-role],[data-conversation-role],[data-testid*="message"],[data-role],[class*="message-bubble"],[class*="claude-response"],[class*="claude-message"],[class*="chat-turn"],[class*="conversation-turn"],[class*="-message"],[class*="message-"]';
     const raw = [...document.querySelectorAll(sel)];
+    const textOf = (n) => (n.innerText || n.textContent || "").trim();
+    // 1) on ne garde que les candidats les plus externes (pas de doublon parent/enfant)
     const nodes = raw.filter((n) => {
-      const t = (n.innerText || "").trim();
-      if (t.length < 1) return false;
-      for (const o of raw) if (o !== n && n.contains(o)) return false;
+      if (textOf(n).length < 1) return false;
+      // les en-têtes de rôle ("Vous avez dit :") ne sont pas des messages
+      if (n.getAttribute("data-conversation-role") !== null) return false;
+      if ((n.getAttribute("role") || "") === "separator") return false;
+      for (const o of raw) if (o !== n && textOf(o).length > 0 && n.contains(o)) return false;
       return true;
     });
+    // 2) un même élément ne doit pas produire deux blocs
     const out = [];
     let expect = "user";
     nodes.forEach((n) => {
@@ -126,23 +132,29 @@
     /^(gemini|chatgpt|claude|grok|qwen|mistral|le chat|copilot|deepseek) (a dit|said)\s*:?\.?$/i,
   ];
 
-  function clean(node) {
+  function clean(node, extra) {
     const c = node.cloneNode(true);
-    if (c.querySelectorAll) c.querySelectorAll("button").forEach((b) => b.remove());
+    if (c.querySelectorAll) {
+      // boutons d'action et icônes (jamais de texte utile dedans)
+      c.querySelectorAll("button, svg, style, script").forEach((b) => b.remove());
+    }
     let t = c.innerText || c.textContent || "";
     t = t.replace(/\u00a0/g, " ");
     const lines = t.split("\n").filter((line) => {
       const L = line.trim();
       return !LABELS.some((re) => re.test(L));
     });
-    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    const body = lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    // éléments joints au message (pièces jointes, cartes…) détectés par le site
+    const pre = (extra || []).map((e) => (e || "").trim()).filter(Boolean);
+    return pre.length ? pre.join("\n") + "\n" + body : body;
   }
 
   function captureKeyed(opts) {
     const out = [];
     getBlocksInfo(opts).blocks.forEach((b) => {
       const kind = b.kind || "message";
-      const content = clean(b.node);
+      const content = clean(b.node, b.extra);
       if (!content) return;
       out.push({ role: b.role, kind, content, k: b.role + "\u0001" + kind + "\u0001" + content });
     });
@@ -214,7 +226,7 @@
     const info = getBlocksInfo(opts);
     const caps = [];
     info.blocks.forEach((b) => {
-      const content = clean(b.node);
+      const content = clean(b.node, b.extra);
       if (content) caps.push({ role: b.role, kind: b.kind || "message", content });
     });
     const users = caps.filter((c) => c.role === "user").length;
