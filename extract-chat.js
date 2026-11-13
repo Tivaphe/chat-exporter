@@ -24,7 +24,7 @@
     return "generic";
   }
   function roleOf(el){
-    var s=((el.getAttribute("data-message-author-role")||"")+" "+(el.getAttribute("data-testid")||"")+" "+(el.getAttribute("data-role")||"")+" "+(el.getAttribute("aria-label")||"")+" "+(el.className||"")).toLowerCase();
+    var s=((el.getAttribute("data-message-author-role")||"")+" "+(el.getAttribute("data-testid")||"")+" "+(el.getAttribute("data-role")||"")+" "+(el.getAttribute("data-conversation-role")||"")+" "+(el.getAttribute("aria-label")||"")+" "+(el.className||"")).toLowerCase();
     if(/\buser\b|\bhuman\b|user-message|human-message/.test(s))return "user";
     if(/assistant|\bmodel\b|response|\bbot\b|message-bubble--ai/.test(s))return "assistant";
     return null;
@@ -32,8 +32,72 @@
   function specific(key){
     var out=[];
     if(key==="chatgpt"){
+      var seen=[];
+      function nearest(el,sel){ return el&&el.closest?el.closest(sel):null; }
+      function push(role,node,extra){
+        if(!node||seen.indexOf(node)>-1)return;
+        seen.push(node);
+        out.push({role:role,node:node,extra:extra||[]});
+      }
+      /* pieces jointes (cartes de fichiers) regroupees par tour */
+      var cards={};
+      document.querySelectorAll(".group\\/resource-card").forEach(function(card){
+        if(nearest(card,"[data-response-body]"))return;
+        var turn=nearest(card,"[data-turn-key], [data-content-search-turn-key]")||card.parentElement;
+        if(!turn)return;
+        var c=card.cloneNode(true);
+        c.querySelectorAll("button,svg").forEach(function(x){x.remove();});
+        var t=(c.textContent||"").replace(/\s+/g," ").trim();
+        if(!t)return;
+        var k=turn.getAttribute("data-turn-key")||turn.getAttribute("data-content-search-turn-key")||"";
+        (cards[k]=cards[k]||[]).push(t);
+      });
+      function cardsOf(el){
+        var turn=nearest(el,"[data-turn-key], [data-content-search-turn-key]");
+        var k=turn?(turn.getAttribute("data-turn-key")||turn.getAttribute("data-content-search-turn-key")||""):"";
+        return cards[k]||[];
+      }
+      /* interface actuelle : une "unite" par message */
+      var firstBubble={};
+      document.querySelectorAll("[data-chatgpt-search-unit-key], [data-content-search-unit-key]").forEach(function(unit){
+        var bubble=unit.querySelector("[data-user-message-bubble]");
+        if(bubble){
+          var turn=nearest(unit,"[data-turn-key], [data-content-search-turn-key]")||unit;
+          var k=turn.getAttribute("data-turn-key")||turn.getAttribute("data-content-search-turn-key")||"";
+          var extra=[];
+          if(!firstBubble[k]){firstBubble[k]=1;extra=cardsOf(unit);}
+          return push("user",bubble,extra);
+        }
+        var body=unit.querySelector("[data-response-body]");
+        if(body){
+          if(nearest(body.parentElement,"[data-response-body]"))return;
+          return push("assistant",body);
+        }
+        var key2=unit.getAttribute("data-chatgpt-search-unit-key")||unit.getAttribute("data-content-search-unit-key")||"";
+        var hint=(key2.split(":").pop()||"").toLowerCase();
+        if(hint==="user"||hint==="assistant")push(hint,unit);
+      });
+      /* interface precedente : en-tete de role + contenu frere */
+      document.querySelectorAll("[data-conversation-role]").forEach(function(h){
+        var role=(h.getAttribute("data-conversation-role")||"").toLowerCase();
+        if(role!=="user"&&role!=="assistant")return;
+        var node=null;
+        if(role==="user"){
+          node=h.parentElement&&h.parentElement.querySelector("[data-user-message-bubble]");
+          if(!node)node=h.parentElement&&h.parentElement.querySelector(".whitespace-pre-wrap");
+        }else{
+          node=h.parentElement&&h.parentElement.querySelector("[data-response-body]");
+        }
+        if(role==="user"&&node)return push("user",node,cardsOf(h));
+        push(role,node);
+      });
+      /* ancienne interface */
       document.querySelectorAll('[data-message-author-role]').forEach(function(el){
-        out.push({role:el.getAttribute("data-message-author-role"),node:el});
+        push((el.getAttribute("data-message-author-role")||"").toLowerCase(),el);
+      });
+      out.sort(function(a,b){
+        if(a.node===b.node)return 0;
+        return a.node.compareDocumentPosition(b.node)&4?-1:1;
       });
     } else if(key==="claude"){
       document.querySelectorAll('[data-testid="user-message"], .font-claude-response, .font-claude-message').forEach(function(el){
@@ -68,13 +132,18 @@
     return out;
   }
   function generic(){
-    var sel='[data-message-author-role],[data-testid*="message"],[data-role],[class*="message-bubble"],[class*="claude-response"],[class*="claude-message"],[class*="chat-turn"],[class*="conversation-turn"],[class*="-message"],[class*="message-"]';
+    var sel='[data-message-author-role],[data-conversation-role],[data-testid*="message"],[data-role],[class*="message-bubble"],[class*="claude-response"],[class*="claude-message"],[class*="chat-turn"],[class*="conversation-turn"],[class*="-message"],[class*="message-"]';
     var raw=[];
     document.querySelectorAll(sel).forEach(function(n){raw.push(n);});
+    function textOf(n){return ((n.innerText||n.textContent||"")+"").trim();}
     var nodes=raw.filter(function(n){
-      var t=(n.innerText||"").trim();
-      if(t.length<1)return false;
-      for(var i=0;i<raw.length;i++){if(raw[i]!==n&&n.contains&&n.contains(raw[i]))return false;}
+      if(textOf(n).length<1)return false;
+      // les en-tetes de role ("Vous avez dit :") ne sont pas des messages
+      if(n.getAttribute("data-conversation-role")!==null)return false;
+      if((n.getAttribute("role")||"")==="separator")return false;
+      for(var i=0;i<raw.length;i++){
+        if(raw[i]!==n&&textOf(raw[i]).length>0&&n.contains&&n.contains(raw[i]))return false;
+      }
       return true;
     });
     var out=[],expect="user";
@@ -93,9 +162,9 @@
     return b;
   }
   var LABELS=[/^vous avez dit\s*:?\.?$/i,/^you said\s*:?\.?$/i,/^(gemini|chatgpt|claude|grok|qwen|mistral|le chat|copilot|deepseek) (a dit|said)\s*:?\.?$/i];
-  function clean(node){
+  function clean(node,extra){
     var c=node.cloneNode(true);
-    if(c.querySelectorAll)c.querySelectorAll("button").forEach(function(b){b.remove();});
+    if(c.querySelectorAll)c.querySelectorAll("button, svg, style, script").forEach(function(b){b.remove();});
     var t=c.innerText||c.textContent||"";
     t=t.replace(/\u00a0/g," ");
     var lines=t.split("\n").filter(function(line){
@@ -103,12 +172,14 @@
       for(var i=0;i<LABELS.length;i++){if(LABELS[i].test(L))return false;}
       return true;
     });
-    return lines.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+    var body=lines.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+    var pre=(extra||[]).filter(function(e){return (e||"").trim();});
+    return pre.length?pre.join("\n")+"\n"+body:body;
   }
   function captureKeyed(key){
     var out=[];
     getBlocks(key).forEach(function(b){
-      var content=clean(b.node);
+      var content=clean(b.node,b.extra);
       if(!content)return;
       out.push({role:b.role,content:content,k:b.role+"\u0001"+content});
     });

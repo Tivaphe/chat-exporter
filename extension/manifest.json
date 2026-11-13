@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Chat Exporter — Discussions LLM en .txt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Exporte la discussion LLM ouverte (ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Grok, Qwen, Arena...) en .txt / .md / .json, avec scroll automatique. Compatible Chrome et Firefox.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],

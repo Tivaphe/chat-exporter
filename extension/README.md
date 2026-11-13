@@ -82,6 +82,15 @@ utilisateur et un message assistant, repère un attribut/classe stable, mets-le 
 `collect`. Si aucun site ne matche, le **moteur générique** prend le relais
 (détection des rôles par attributs, sinon par alternance).
 
+### ChatGPT : ce qu'on utilise aujourd'hui
+| Élément | Rôle |
+|---|---|
+| `[data-chatgpt-search-unit-key]` / `[data-content-search-unit-key]` | une « unité » = un message (`…:0:user`, `…:2:assistant`) |
+| `[data-user-message-bubble]` | le texte du message utilisateur |
+| `[data-response-body]` | le corps de la réponse de l'assistant |
+| `.group/resource-card` | carte de fichier joint (nom du document) |
+| `[data-conversation-role]` / `[data-message-author-role]` | anciennes interfaces (repli) |
+
 ### Filet de sécurité
 - Si `collect` plante ou ne renvoie rien → bascule automatique sur le générique.
 - Dé-doublonnage par chevauchement (sûr pour les listes virtualisées).
@@ -91,6 +100,11 @@ utilisateur et un message assistant, repère un attribut/classe stable, mets-le 
 
 ## ✅ Sites testés
 Support dédié : ChatGPT · Claude · Gemini · Perplexity · DeepSeek · Arena.
+
+**ChatGPT** : le collecteur gère l'interface actuelle (`data-chatgpt-search-unit-key`,
+`data-user-message-bubble`, `data-response-body`), l'interface précédente
+(`data-conversation-role`) et l'ancienne (`data-message-author-role`). Les cartes de
+pièces jointes (`.group/resource-card`) sont exportées avant le message concerné.
 Via mode générique : Grok · Qwen.
 (Aucun autre site n'a été testé pour l'instant — le générique ou les sélecteurs personnalisés peuvent aider.)
 

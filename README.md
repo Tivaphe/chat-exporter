@@ -33,7 +33,7 @@ avec un **mode générique** qui tente de gérer les autres. Avec **scroll autom
 
 | Site | Support |
 |---|---|
-| ChatGPT | ✅ Dédié |
+| ChatGPT | ✅ Dédié (ancienne **et** nouvelle interface 2026, pièces jointes incluses) |
 | Claude | ✅ Dédié |
 | Gemini | ✅ Dédié |
 | Perplexity | ✅ Dédié |
